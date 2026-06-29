@@ -114,8 +114,13 @@ async function startInstance(instanceName, resWebhookUrl = WEBHOOK_URL) {
     sock.ev.on('messages.upsert', async (m) => {
         if (m.type === 'notify') {
             for (const msg of m.messages) {
-                if (!msg.key.fromMe && msg.message) {
-                    const from = msg.key.remoteJid.split('@')[0];
+                // Filtra para responder apenas mensagens privadas (DMs) enviadas por contatos reais
+                if (!msg.key.fromMe && msg.message && msg.key.remoteJid && msg.key.remoteJid.endsWith('@s.whatsapp.net')) {
+                    let from = msg.key.remoteJid.split('@')[0];
+                    // Remove identificadores de múltiplos dispositivos (ex: "556693618162:1" -> "556693618162")
+                    if (from.includes(':')) {
+                        from = from.split(':')[0];
+                    }
                     const name = msg.pushName || 'Contato WhatsApp';
                     let text = '';
 
