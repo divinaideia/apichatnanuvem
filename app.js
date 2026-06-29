@@ -122,6 +122,7 @@ async function startInstance(instanceName, resWebhookUrl = WEBHOOK_URL) {
                     }
 
                     if (text) {
+                        console.log(`[Instance ${instanceName}] 📩 Mensagem Recebida de ${name} (${from}): "${text}"`);
                         // Envia para o painel PHP via Webhook
                         triggerWebhook(resWebhookUrl, {
                             event: 'message.received',
@@ -149,6 +150,8 @@ function triggerWebhook(url, payload) {
         contaId = payload.instance.replace('instancia_', '');
     }
 
+    console.log(`[Webhook] 📤 Disparando webhook para: ${url}`);
+
     // Envia assincronamente usando a API fetch nativa do Node 18+
     fetch(url, {
         method: 'POST',
@@ -162,7 +165,14 @@ function triggerWebhook(url, payload) {
             numero: payload.from || '',
             mensagem: payload.text || JSON.stringify(payload)
         })
-    }).catch(() => {});
+    })
+    .then(async (res) => {
+        const text = await res.text();
+        console.log(`[Webhook] 📡 Resposta do Servidor PHP (Status ${res.status}):`, text.substring(0, 300));
+    })
+    .catch((err) => {
+        console.error(`[Webhook] ❌ Erro ao enviar webhook para ${url}:`, err.message);
+    });
 }
 
 // --------------------------------------------------------------------------
