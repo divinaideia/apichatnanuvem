@@ -35,6 +35,32 @@ const instances = {};
 const logger = pino({ level: 'silent' });
 
 /**
+ * Extrai o texto contido em qualquer formato de mensagem do Baileys
+ */
+function extractTextContent(message) {
+    if (!message) return '';
+    
+    // Suporte a mensagens temporárias / visualização única
+    if (message.ephemeralMessage) {
+        message = message.ephemeralMessage.message;
+    }
+    if (message.viewOnceMessage) {
+        message = message.viewOnceMessage.message;
+    }
+    if (message.viewOnceMessageV2) {
+        message = message.viewOnceMessageV2.message;
+    }
+    if (!message) return '';
+
+    return message.conversation || 
+           message.extendedTextMessage?.text || 
+           message.imageMessage?.caption || 
+           message.videoMessage?.caption || 
+           message.documentMessage?.caption || 
+           '';
+}
+
+/**
  * Inicializa ou recupera uma conexão do WhatsApp
  */
 async function startInstance(instanceName, resWebhookUrl = WEBHOOK_URL) {
@@ -128,13 +154,11 @@ async function startInstance(instanceName, resWebhookUrl = WEBHOOK_URL) {
                         from = from + '@lid';
                     }
                     const name = msg.pushName || 'Contato WhatsApp';
-                    let text = '';
-
-                    if (msg.message.conversation) {
-                        text = msg.message.conversation;
-                    } else if (msg.message.extendedTextMessage?.text) {
-                        text = msg.message.extendedTextMessage.text;
-                    }
+                    
+                    console.log(`[Instance ${instanceName}] 📩 Conteúdo da mensagem recebida:`, JSON.stringify(msg.message));
+                    
+                    // Extrai o conteúdo de texto da mensagem usando o método auxiliar
+                    const text = extractTextContent(msg.message);
 
                     if (text) {
                         console.log(`[Instance ${instanceName}] 📩 Mensagem Filtrada e Aprovada de ${name} (${from}): "${text}"`);
@@ -146,6 +170,8 @@ async function startInstance(instanceName, resWebhookUrl = WEBHOOK_URL) {
                             name: name,
                             text: text
                         });
+                    } else {
+                        console.log(`[Instance ${instanceName}] ⚠️ Mensagem sem conteúdo de texto extraível.`);
                     }
                 }
             }
