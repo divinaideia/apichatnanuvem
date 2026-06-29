@@ -143,12 +143,21 @@ async function startInstance(instanceName, resWebhookUrl = WEBHOOK_URL) {
  * Função para disparar Webhook para o PHP
  */
 function triggerWebhook(url, payload) {
-    // Envia assincronamente usando a API fetch nativa do Node 18+ (sem requisições externas de pacotes)
+    // Extrai o ID da conta a partir de "instancia_X"
+    let contaId = '1';
+    if (payload.instance) {
+        contaId = payload.instance.replace('instancia_', '');
+    }
+
+    // Envia assincronamente usando a API fetch nativa do Node 18+
     fetch(url, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        headers: { 
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
+        },
         body: new URLSearchParams({
-            conta_id: url.includes('/simulador/webhook') ? '1' : '', // Ajuste de conveniência
+            conta_id: contaId,
             nome: payload.name || 'API WhatsApp',
             numero: payload.from || '',
             mensagem: payload.text || JSON.stringify(payload)
