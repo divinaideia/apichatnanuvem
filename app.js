@@ -47,7 +47,9 @@ async function startInstance(instanceName, resWebhookUrl = WEBHOOK_URL) {
         logger: logger,
         browser: ['Ubuntu', 'Chrome', '124.0.0.0'],
         connectTimeoutMs: 30000,
-        keepAliveIntervalMs: 30000
+        keepAliveIntervalMs: 30000,
+        syncFullHistory: false,
+        shouldSyncHistoryMessage: () => false
     });
 
     instances[instanceName] = {
