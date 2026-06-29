@@ -112,8 +112,10 @@ async function startInstance(instanceName, resWebhookUrl = WEBHOOK_URL) {
 
     // Escuta novas mensagens recebidas
     sock.ev.on('messages.upsert', async (m) => {
+        console.log(`[Instance ${instanceName}] 🔔 Evento messages.upsert: tipo=${m.type}, quantidade=${m.messages?.length}`);
         if (m.type === 'notify') {
             for (const msg of m.messages) {
+                console.log(`[Instance ${instanceName}] 📩 Analisando msg: fromMe=${msg.key.fromMe}, remoteJid=${msg.key.remoteJid}, hasMessage=${!!msg.message}`);
                 // Filtra para responder apenas mensagens privadas (DMs) enviadas por contatos reais
                 if (!msg.key.fromMe && msg.message && msg.key.remoteJid && msg.key.remoteJid.endsWith('@s.whatsapp.net')) {
                     let from = msg.key.remoteJid.split('@')[0];
@@ -131,7 +133,7 @@ async function startInstance(instanceName, resWebhookUrl = WEBHOOK_URL) {
                     }
 
                     if (text) {
-                        console.log(`[Instance ${instanceName}] 📩 Mensagem Recebida de ${name} (${from}): "${text}"`);
+                        console.log(`[Instance ${instanceName}] 📩 Mensagem Filtrada e Aprovada de ${name} (${from}): "${text}"`);
                         // Envia para o painel PHP via Webhook
                         triggerWebhook(resWebhookUrl, {
                             event: 'message.received',
