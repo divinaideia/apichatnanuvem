@@ -20,6 +20,10 @@ const QRCode = require('qrcode');
 const app = express();
 app.use(cors());
 app.use(express.json());
+app.use((req, res, next) => {
+    console.log(`[HTTP] 📡 ${req.method} ${req.url} - Body:`, JSON.stringify(req.body));
+    next();
+});
 
 const PORT = process.env.PORT || 3000;
 const WEBHOOK_URL = process.env.WEBHOOK_URL || 'http://localhost/simulador/webhook';
