@@ -116,12 +116,16 @@ async function startInstance(instanceName, resWebhookUrl = WEBHOOK_URL) {
         if (m.type === 'notify') {
             for (const msg of m.messages) {
                 console.log(`[Instance ${instanceName}] 📩 Analisando msg: fromMe=${msg.key.fromMe}, remoteJid=${msg.key.remoteJid}, hasMessage=${!!msg.message}`);
-                // Filtra para responder apenas mensagens privadas (DMs) enviadas por contatos reais
-                if (!msg.key.fromMe && msg.message && msg.key.remoteJid && msg.key.remoteJid.endsWith('@s.whatsapp.net')) {
+                // Filtra para responder apenas mensagens privadas (DMs) enviadas por contatos reais (incluindo o protocolo @lid)
+                if (!msg.key.fromMe && msg.message && msg.key.remoteJid && (msg.key.remoteJid.endsWith('@s.whatsapp.net') || msg.key.remoteJid.endsWith('@lid'))) {
                     let from = msg.key.remoteJid.split('@')[0];
                     // Remove identificadores de múltiplos dispositivos (ex: "556693618162:1" -> "556693618162")
                     if (from.includes(':')) {
                         from = from.split(':')[0];
+                    }
+                    // Preserva o sufixo @lid no número para podermos responder no canal correto
+                    if (msg.key.remoteJid.endsWith('@lid')) {
+                        from = from + '@lid';
                     }
                     const name = msg.pushName || 'Contato WhatsApp';
                     let text = '';
@@ -364,7 +368,14 @@ app.post('/message/sendText', async (req, res) => {
     }
 
     try {
-        const cleanJid = number.replace(/\D/g, '') + '@s.whatsapp.net';
+        let cleanJid = number;
+        if (cleanJid.includes('@')) {
+            // Se já contém domínio (como @lid), usa o JID inteiro
+            cleanJid = cleanJid.trim();
+        } else {
+            // Caso contrário, padroniza para o domínio padrão
+            cleanJid = cleanJid.replace(/\D/g, '') + '@s.whatsapp.net';
+        }
         const result = await instance.sock.sendMessage(cleanJid, { text: text });
         res.json({ status: 'success', messageId: result.key.id });
     } catch (err) {
