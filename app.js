@@ -77,6 +77,9 @@ async function startInstance(instanceName, resWebhookUrl = WEBHOOK_URL) {
             
             if (shouldReconnect) {
                 console.log(`[Instance ${instanceName}] Conexão fechada. Erro:`, lastDisconnect?.error, `Re-inicializando em 5 segundos...`);
+                if (instances[instanceName]) {
+                    instances[instanceName].sock = null;
+                }
                 setTimeout(() => {
                     startInstance(instanceName, resWebhookUrl);
                 }, 5000);
