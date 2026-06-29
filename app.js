@@ -60,6 +60,9 @@ async function startInstance(instanceName, resWebhookUrl = WEBHOOK_URL) {
     };
 
     sock.ev.on('connection.update', async (update) => {
+        if (!instances[instanceName]) {
+            return;
+        }
         const { connection, lastDisconnect, qr } = update;
 
         if (qr) {
