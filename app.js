@@ -34,6 +34,39 @@ const instances = {};
 // Logger silencioso para o Baileys não inundar o terminal
 const logger = pino({ level: 'silent' });
 
+// Helper para gerenciar o mapeamento de LIDs para números reais
+const lidMaps = {};
+
+function saveLidMap(instanceName, phone, lid) {
+    if (!lidMaps[instanceName]) {
+        lidMaps[instanceName] = {};
+    }
+    lidMaps[instanceName][phone] = lid;
+    
+    const sessionDir = path.join(__dirname, 'sessions', instanceName);
+    if (fs.existsSync(sessionDir)) {
+        try {
+            fs.writeFileSync(path.join(sessionDir, 'lid_map.json'), JSON.stringify(lidMaps[instanceName], null, 2));
+        } catch (e) {}
+    }
+}
+
+function loadLidMap(instanceName) {
+    if (lidMaps[instanceName]) return lidMaps[instanceName];
+    
+    const sessionDir = path.join(__dirname, 'sessions', instanceName);
+    const mapPath = path.join(sessionDir, 'lid_map.json');
+    if (fs.existsSync(mapPath)) {
+        try {
+            lidMaps[instanceName] = JSON.parse(fs.readFileSync(mapPath, 'utf-8'));
+            return lidMaps[instanceName];
+        } catch (e) {}
+    }
+    
+    lidMaps[instanceName] = {};
+    return lidMaps[instanceName];
+}
+
 /**
  * Extrai o texto contido em qualquer formato de mensagem do Baileys
  */
@@ -70,6 +103,9 @@ async function startInstance(instanceName, resWebhookUrl = WEBHOOK_URL) {
 
     const sessionDir = path.join(__dirname, 'sessions', instanceName);
     const { state, saveCreds } = await useMultiFileAuthState(sessionDir);
+    
+    // Carrega mapeamentos de LIDs salvos em disco
+    loadLidMap(instanceName);
 
     const sock = makeWASocket({
         auth: state,
@@ -157,6 +193,8 @@ async function startInstance(instanceName, resWebhookUrl = WEBHOOK_URL) {
                             altFrom = altFrom.split(':')[0];
                         }
                         console.log(`[Instance ${instanceName}] 🔗 Resolvido LID ${from}@lid para o número real: ${altFrom}`);
+                        // Salva a relação para responder usando o LID correspondente e manter a sessão ativa
+                        saveLidMap(instanceName, altFrom, msg.key.remoteJid);
                         from = altFrom;
                     } else if (msg.key.remoteJid.endsWith('@lid')) {
                         // Caso contrário, se for LID e não tiver alt, enviamos com o sufixo @lid
@@ -413,13 +451,20 @@ app.post('/message/sendText', async (req, res) => {
     }
 
     try {
-        let cleanJid = number;
+        let cleanJid = number.trim();
         if (cleanJid.includes('@')) {
             // Se já contém domínio (como @lid), usa o JID inteiro
             cleanJid = cleanJid.trim();
         } else {
-            // Caso contrário, padroniza para o domínio padrão
-            cleanJid = cleanJid.replace(/\D/g, '') + '@s.whatsapp.net';
+            const cleanNumber = cleanJid.replace(/\D/g, '');
+            const lidMap = loadLidMap(instanceName);
+            if (lidMap[cleanNumber]) {
+                console.log(`[Instance ${instanceName}] 🔗 Redirecionando envio para o LID original do contato: ${lidMap[cleanNumber]} (Número original: ${cleanNumber})`);
+                cleanJid = lidMap[cleanNumber];
+            } else {
+                // Caso contrário, padroniza para o domínio padrão
+                cleanJid = cleanNumber + '@s.whatsapp.net';
+            }
         }
         const result = await instance.sock.sendMessage(cleanJid, { text: text });
         res.json({ status: 'success', messageId: result.key.id });
