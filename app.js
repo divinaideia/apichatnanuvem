@@ -149,8 +149,17 @@ async function startInstance(instanceName, resWebhookUrl = WEBHOOK_URL) {
                     if (from.includes(':')) {
                         from = from.split(':')[0];
                     }
-                    // Preserva o sufixo @lid no número para podermos responder no canal correto
-                    if (msg.key.remoteJid.endsWith('@lid')) {
+                    
+                    // Se houver um JID alternativo com o número de telefone real, nós o preferimos!
+                    if (msg.key && msg.key.remoteJidAlt && msg.key.remoteJidAlt.endsWith('@s.whatsapp.net')) {
+                        let altFrom = msg.key.remoteJidAlt.split('@')[0];
+                        if (altFrom.includes(':')) {
+                            altFrom = altFrom.split(':')[0];
+                        }
+                        console.log(`[Instance ${instanceName}] 🔗 Resolvido LID ${from}@lid para o número real: ${altFrom}`);
+                        from = altFrom;
+                    } else if (msg.key.remoteJid.endsWith('@lid')) {
+                        // Caso contrário, se for LID e não tiver alt, enviamos com o sufixo @lid
                         from = from + '@lid';
                     }
                     const name = msg.pushName || 'Contato WhatsApp';
