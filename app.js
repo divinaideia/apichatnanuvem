@@ -156,6 +156,16 @@ async function startInstance(instanceName, resWebhookUrl = WEBHOOK_URL) {
                     const name = msg.pushName || 'Contato WhatsApp';
                     
                     console.log(`[Instance ${instanceName}] 📩 Conteúdo da mensagem recebida:`, JSON.stringify(msg.message));
+                    console.log(`[Instance ${instanceName}] 🔍 Diagnóstico do Objeto MSG:`, JSON.stringify({
+                        key: msg.key,
+                        pushName: msg.pushName,
+                        senderPn: msg.senderPn || null,
+                        participantPn: msg.participantPn || null,
+                        remoteJidAlt: msg.key?.remoteJidAlt || null,
+                        participantAlt: msg.key?.participantAlt || null,
+                        devicePn: msg.devicePn || null,
+                        phoneNumber: msg.phoneNumber || null
+                    }));
                     
                     // Extrai o conteúdo de texto da mensagem usando o método auxiliar
                     const text = extractTextContent(msg.message);
